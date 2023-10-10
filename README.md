@@ -1,6 +1,11 @@
 # Weather_Scraper
 Python module with functions that get weather info from the web and look for conditions that indicate TGFs.
 
+Note - the following python packages are required for the module to function properly:
+- Pandas
+- lxml
+- Selenium
+
 There are two main functions in the module: get_weather and scrape_weather.
 
 get_weather: <br />
