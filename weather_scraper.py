@@ -1,3 +1,4 @@
+"""Functions for scraping weather."""
 import os as os
 import contextlib as contextlib
 import datetime as dt
@@ -8,11 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 
-# Global variables needed by various functions.
-g_two_am = 7200  # Number of seconds of the day corresponding to 2:00AM
-g_sec_per_hour = 3600
-g_sec_per_day = 86400
-g_century = '20'
+import parameters as params
 
 
 def get_weather(full_date_str, event_time, station, timezone_conversion=0, is_dst=False, return_string=False):
@@ -99,13 +96,12 @@ def get_weather(full_date_str, event_time, station, timezone_conversion=0, is_ds
 
             return weather_string
         else:
-            lightning_variations = ['Thunder', 'T-Storm', 'Storm', 'Lightning', 'Hail']
             heavy_rain = False
             rain = False
             print(weather)
             for condition in weather:
                 if condition:
-                    for variation in lightning_variations:
+                    for variation in ['Thunder', 'T-Storm', 'Storm', 'Lightning', 'Hail']:
                         if variation in condition:
                             return 3
 
@@ -171,7 +167,7 @@ def full_date_to_short(full_date_str):
 
 def short_to_full_date(date_str):
     """Converts a date string of the form yymmdd to the form yyyy-mm-dd."""
-    return f'{g_century}{date_str[0:2]}-{date_str[2:4]}-{date_str[4:]}'
+    return f'{params.CENTURY}{date_str[0:2]}-{date_str[2:4]}-{date_str[4:]}'
 
 
 def days_per_month(month, year):
@@ -197,7 +193,7 @@ def roll_date_forward(date_str):
     date_int += 1
     date_str = str(date_int)
     # Month rollover
-    if int(date_str[4:]) > days_per_month(int(date_str[2:4]), int(g_century + date_str[0:2])):
+    if int(date_str[4:]) > days_per_month(int(date_str[2:4]), int(params.CENTURY + date_str[0:2])):
         date_int = date_int + 100 - (int(date_str[4:]) - 1)
         date_str = str(date_int)
 
@@ -222,7 +218,7 @@ def roll_date_backward(date_str):
     # Month rollback
     if int(date_str[4:]) == 0:
         date_int -= 100
-        date_int += days_per_month(int(str(date_int)[2:4]), int(g_century + date_str[0:2]))
+        date_int += days_per_month(int(str(date_int)[2:4]), int(params.CENTURY + date_str[0:2]))
         date_str = str(date_int)
 
     return date_str
@@ -230,7 +226,7 @@ def roll_date_backward(date_str):
 
 def dst_status(date_str):
     """Returns string statuses depending on whether a day falls inside/outside/on the edge of dst."""
-    year = int(g_century + date_str[0:2])
+    year = int(params.CENTURY + date_str[0:2])
     month = int(date_str[2:4])
     day = int(date_str[4:])
 
@@ -262,12 +258,12 @@ def dst_status(date_str):
 
 def dst_conversion(date_str, event_time, timezone_conversion):
     """Returns an updated utc to local conversion number depending on the given date and time."""
-    temp_time = event_time + (timezone_conversion * g_sec_per_hour)
-    if temp_time > g_sec_per_day:
-        temp_time -= g_sec_per_day
+    temp_time = event_time + (timezone_conversion * params.SEC_PER_HOUR)
+    if temp_time > params.SEC_PER_DAY:
+        temp_time -= params.SEC_PER_DAY
         temp_date = roll_date_forward(date_str)
     elif temp_time < 0:
-        temp_time += g_sec_per_day
+        temp_time += params.SEC_PER_DAY
         temp_date = roll_date_backward(date_str)
     else:
         temp_date = date_str
@@ -278,12 +274,12 @@ def dst_conversion(date_str, event_time, timezone_conversion):
     elif temp_date_status == 'outside':  # Squarely outside dst
         return timezone_conversion
     elif temp_date_status == 'beginning':  # Beginning of dst (2nd Sunday of March at 2:00AM)
-        if temp_time >= g_two_am:
+        if temp_time >= params.TWO_AM:
             return timezone_conversion + 1
         else:
             return timezone_conversion
     else:  # End of dst (1st Sunday of November at 2:00AM)
-        if (temp_time + g_sec_per_hour) >= g_two_am:  # + sec_per_hour b/c temp time should be in dst
+        if (temp_time + params.SEC_PER_HOUR) >= params.TWO_AM:  # + sec_per_hour b/c temp time should be in dst
             return timezone_conversion
         else:
             return timezone_conversion + 1
@@ -298,15 +294,15 @@ def convert_to_local(full_date_str, event_time, timezone_conversion, is_dst):
         timezone_conversion = dst_conversion(date_str, event_time, timezone_conversion)
 
     # If the event happened the next day local time
-    if (event_time + (g_sec_per_hour * timezone_conversion)) > g_sec_per_day:
+    if (event_time + (params.SEC_PER_HOUR * timezone_conversion)) > params.SEC_PER_DAY:
         date_str = roll_date_forward(date_str)
-        event_time = (event_time + (g_sec_per_hour * timezone_conversion)) - g_sec_per_day
+        event_time = (event_time + (params.SEC_PER_HOUR * timezone_conversion)) - params.SEC_PER_DAY
     # If the event happened the previous day local time
-    elif (event_time + (g_sec_per_hour * timezone_conversion)) < 0:
+    elif (event_time + (params.SEC_PER_HOUR * timezone_conversion)) < 0:
         date_str = roll_date_backward(timezone_conversion)
-        event_time = (event_time + (g_sec_per_hour * timezone_conversion)) + g_sec_per_day
+        event_time = (event_time + (params.SEC_PER_HOUR * timezone_conversion)) + params.SEC_PER_DAY
     else:
-        event_time = event_time + (g_sec_per_hour * timezone_conversion)
+        event_time = event_time + (params.SEC_PER_HOUR * timezone_conversion)
 
     return short_to_full_date(date_str), event_time
 
@@ -326,7 +322,7 @@ def convert_clock_hour(clock_hour):
     elif meridiem == 'PM':  # PM conversion
         hour += 12
 
-    return float((hour * g_sec_per_hour) + (minute * 60))
+    return float((hour * params.SEC_PER_HOUR) + (minute * 60))
 
 
 def is_valid_date(full_date_str):
