@@ -172,19 +172,31 @@ def short_to_full_date(date_str):
 
 def days_per_month(month, year):
     """Returns the number of days in the requested month based on the year."""
-    month_dict = {'1': 31,  # January
-                  '2': 29 if year % 4 == 0 or (year % 100 != 0 and year % 400 == 0) else 28,  # February
-                  '3': 31,  # March
-                  '4': 30,  # April
-                  '5': 31,  # May
-                  '6': 30,  # June
-                  '7': 31,  # July
-                  '8': 31,  # August
-                  '9': 30,  # September
-                  '10': 31,  # October
-                  '11': 30,  # November
-                  '12': 31}  # December
-    return month_dict[str(month)]
+
+    if month == 1:  # January
+        return 31
+    elif month == 2:  # February
+        return 29 if year % 4 == 0 or (year % 100 != 0 and year % 400 == 0) else 28
+    elif month == 3:  # March
+        return 31
+    elif month == 4:  # April
+        return 30
+    elif month == 5:  # May
+        return 31
+    elif month == 6:  # June
+        return 30
+    elif month == 7:  # July
+        return 31
+    elif month == 8:  # August
+        return 31
+    elif month == 9:  # September
+        return 30
+    elif month == 10:  # October
+        return 31
+    elif month == 11:  # November
+        return 30
+    else:  # December
+        return 31
 
 
 def roll_date_forward(date_str):
@@ -222,6 +234,20 @@ def roll_date_backward(date_str):
         date_str = str(date_int)
 
     return date_str
+
+
+def make_date_list(first_date, second_date):
+    """Makes a list of dates from first_date to second_date (inclusive)."""
+    requested_dates = [first_date]
+    if first_date != second_date:
+        date_str = first_date
+        while True:
+            date_str = roll_date_forward(date_str)
+            requested_dates.append(date_str)
+            if date_str == second_date:
+                break
+
+    return requested_dates
 
 
 def dst_status(date_str):
